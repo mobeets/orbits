@@ -12,7 +12,14 @@
     <!-- toggle keep barycenter at center -->
     <!-- toggle show history -->
     
-    <div id="reset" class="button">reset</div>
+    <div class="dropdown">
+      <button class="dropbtn">origin: <span id="current-view">barycenter</span></button>
+      <div class="dropdown-content">
+        <a class="viewpoint" href="#barycenter">barycenter</a>
+        <a class="viewpoint" href="#planet">red planet</a>
+        <a class="viewpoint" href="#absolute">absolute</a>
+      </div>
+    </div>
     <label class="switch">
      <input type="checkbox" id="togBtn-history">
      <div class="slider round">
@@ -31,11 +38,6 @@
       <!--END-->
      </div>
     </label>
-
-  	<span class="trial-info"></span>
-  	<span class="response-info"></span>
-    <main>
-    </main>
-    <div id='results'>
+    <div id="reset" class="button">reset</div>
   </body>
 </html>

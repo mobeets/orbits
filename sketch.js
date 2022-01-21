@@ -2,9 +2,9 @@ let windowWidth;
 let windowHeight;
 let aRad = 10;
 let bRad = 50;
-let step = 0.2;
+let step = 0.02;
 let showHistory = true;
-let centerMode = 'bary';
+let centerMode = 'barycenter';
 let maxHistoryLength = 2500;
 let aColor;
 let bColor;
@@ -14,6 +14,12 @@ let a, b, origin, va, vb;
 let aMass, bMass;
 let history;
 
+// todo:
+// - I think orbits should be closed and not like a spirograph; what is going wrong with my code?
+// - make planet B a light source? (involves making planet A a sphere, and then adding a point light wherever planet B is)
+// - make lines neon? # https://www.youtube.com/watch?v=iIWH3IUYHzM
+// 
+
 function setup() {
 	windowWidth = displayWidth;
 	windowHeight = displayHeight-150;
@@ -22,8 +28,11 @@ function setup() {
 	bColor = color('rgba(255, 0, 0, 0.8)');
 	$('#togBtn-history').change(updateHistory);
 	$('#reset').click(reset);
+	$('a.viewpoint').click(changeViewpoint);
+
 	reset();
 	mode = 1;
+	$('#togBtn-history').click();
 }
 
 function draw() {
@@ -45,19 +54,20 @@ function draw() {
 		}
 	}
 
-	// draw planet A
-	noStroke();
-	fill(aColor);
-	ellipse(a.x, a.y, aRad);
-
 	// draw planet B
 	fill(bColor);
+	noStroke();
 	if (mode === 1) {
 		b.x = constrain(mouseX, origin.x, windowWidth);
 		bRad = getRadiusForBarycenterAtOrigin(a.x, b.x);
 		bMass = getMass(bRad);
 	}
 	ellipse(b.x, b.y, bRad);
+
+	// draw planet A
+	fill(aColor);
+	noStroke();
+	ellipse(a.x, a.y, aRad);
 
 	// pick/draw velocity of A
 	stroke(aColor);
@@ -99,13 +109,13 @@ function draw() {
 		b.x += step*vb.x;
 		b.y += step*vb.y;
 
-		if (centerMode.localeCompare('bary') == 0) {
+		if (centerMode.localeCompare('barycenter') == 0) {
 			// center view around barycenter
 			let c = getBarycenter(a, b, aMass, bMass);
 			let offset = createVector(origin.x - c.x, origin.y - c.y);
 			a.add(offset);
 			b.add(offset);
-		} else if (centerMode.localeCompare('b') == 0) {
+		} else if (centerMode.localeCompare('planet') == 0) {
 			let offset = createVector(origin.x - b.x, origin.y - b.y);
 			a.add(offset);
 			b.add(offset);
@@ -128,6 +138,20 @@ function reset() {
 	va = createVector(0, 0);
 	vb = createVector(0, 0);
 	history = [];
+}
+
+function changeViewpoint() {
+
+	let anchor = $(this).attr("href");
+	if (anchor.localeCompare('#barycenter') == 0) {
+		centerMode = 'barycenter';
+	} else if (anchor.localeCompare('#planet') == 0) {
+		centerMode = 'planet';
+	} else {
+		centerMode = 'absolute';
+	}
+	$('#current-view').html(centerMode);
+	updateHistory();
 }
 
 function updateHistory() {
