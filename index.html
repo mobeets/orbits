@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+	<meta charset="utf-8">
+    <script src="static/p5.min.js"></script>
+    <script src="static/jquery.min.js"></script>
+    <script src="sketch.js"></script>
+    <link rel="stylesheet" href="static/style.css">
+  </head>
+  <body>
+    <!-- reset -->
+    <!-- toggle keep barycenter at center -->
+    <!-- toggle show history -->
+    
+    <div id="reset" class="button">reset</div>
+    <label class="switch">
+     <input type="checkbox" id="togBtn-history">
+     <div class="slider round">
+      <!--ADDED HTML -->
+      <span class="on">history on</span>
+      <span class="off">history off</span>
+      <!--END-->
+     </div>
+    </label>
+    <label class="switch">
+     <input type="checkbox" id="togBtn-velocity">
+     <div class="slider round">
+      <!--ADDED HTML -->
+      <span class="on">velocity on</span>
+      <span class="off">velocity off</span>
+      <!--END-->
+     </div>
+    </label>
+
+  	<span class="trial-info"></span>
+  	<span class="response-info"></span>
+    <main>
+    </main>
+    <div id='results'>
+  </body>
+</html>
