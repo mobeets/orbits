@@ -3,25 +3,30 @@ let windowHeight;
 let aRad = 10;
 let bRad = 50;
 let step = 0.1;
+let gravityStrength = 10;
 let showHistory = true;
 let centerMode = 'barycenter';
 let maxHistoryLength = 2500;
+
+let animateMode = 5;
 let aColor;
 let bColor;
-
 let mode;
 let a, b, origin, va, vb;
 let aMass, bMass;
 let history;
 
 // todo:
+// - gravity for multiple planets
+// - functionality to add/remove multiple planets
+// - click, drag, and throw planets to initialize?
 // - I think orbits should be closed and not like a spirograph; what is going wrong with my code?
 // - make planet B a light source? (involves making planet A a sphere, and then adding a point light wherever planet B is)
 // - make lines neon? # https://www.youtube.com/watch?v=iIWH3IUYHzM
 // 
 
 function setup() {
-	windowWidth = displayWidth;
+	windowWidth = displayWidth/2;
 	windowHeight = displayHeight-150;
 	createCanvas(windowWidth, windowHeight);
 	aColor = color('rgba(255, 255, 255, 0.8)');
@@ -29,6 +34,8 @@ function setup() {
 	$('#togBtn-history').change(updateHistory);
 	$('#reset').click(reset);
 	$('a.viewpoint').click(changeViewpoint);
+	$('#gravity').change(updateGravity);
+	$('#step-size').change(updateStepsize);
 
 	reset();
 	mode = 1;
@@ -40,12 +47,12 @@ function draw() {
 	background('black');
 
 	// draw cross at origin/barycenter
-	stroke('white');
-	line(origin.x-5, origin.y, origin.x+5, origin.y);
-	line(origin.x, origin.y-5, origin.x, origin.y+5);
+	// stroke('white');
+	// line(origin.x-5, origin.y, origin.x+5, origin.y);
+	// line(origin.x, origin.y-5, origin.x, origin.y+5);
 
 	// show history
-	if (mode >= 4 && showHistory) {
+	if (mode >= animateMode && showHistory) {
 		for (var i = 0; i < history.length-1; i++) {
 			stroke(aColor);
 			line(history[i][0], history[i][1], history[i+1][0], history[i+1][1]);
@@ -58,8 +65,14 @@ function draw() {
 	fill(bColor);
 	noStroke();
 	if (mode === 1) {
-		b.x = constrain(mouseX, origin.x, windowWidth);
-		bRad = getRadiusForBarycenterAtOrigin(a.x, b.x);
+		// b.x = constrain(mouseX, origin.x, windowWidth);
+		b.x = mouseX;
+		b.y = mouseY;
+	}
+
+	// pick planet B's radius
+	if (mode === 2) {
+		bRad = createVector(mouseX, mouseY).dist(b);
 		bMass = getMass(bRad);
 	}
 	ellipse(b.x, b.y, bRad);
@@ -71,26 +84,26 @@ function draw() {
 
 	// pick/draw velocity of A
 	stroke(aColor);
-	if (mode === 2) {
+	if (mode === 3) {
 		va.x = mouseX - a.x;
 		va.y = mouseY - a.y;
 	}
-	if (mode <= 3 || showVelocities()) {
+	if (mode <= 4 || showVelocities()) {
 		line(a.x, a.y, a.x + va.x, a.y + va.y);
 	}
 
 	// pick/draw velocity of B
 	stroke(bColor);
-	if (mode === 3) {
+	if (mode === 4) {
 		vb.x = mouseX - b.x;
 		vb.y = mouseY - b.y;
 	}
-	if (mode <= 3 || showVelocities()) {
+	if (mode <= 4 || showVelocities()) {
 		line(b.x, b.y, b.x + vb.x, b.y + vb.y);
 	}
 
 	// animate
-	if (mode === 4) {
+	if (mode === animateMode) {
 		updatePlanets();
 
 		centerAtOrigin();
@@ -117,6 +130,13 @@ function updatePlanets() {
 	b.y += step*vb.y;	
 }
 
+function gravitationalForce(a, b, aMass, bMass) {
+	let dsq = Math.pow(a.dist(b), 2);
+	let F = gravityStrength * -aMass*bMass/dsq;
+	let u = createVector(b.x-a.x, b.y-a.y);
+	return u.normalize().mult(F);
+}
+
 function centerAtOrigin() {
 	if (centerMode.localeCompare('barycenter') == 0) {
 		// center view around barycenter
@@ -131,11 +151,15 @@ function centerAtOrigin() {
 	}
 }
 
-function gravitationalForce(a, b, aMass, bMass) {
-	let dsq = Math.pow(a.dist(b), 2);
-	let F = 100 * -aMass*bMass/dsq;
-	let u = createVector(b.x-a.x, b.y-a.y);
-	return u.normalize().mult(F);
+function getBarycenter(a, b, ma, mb) {
+	let p = ma/(ma+mb);
+	let cx = p*a.x + (1-p)*b.x;
+	let cy = p*a.y + (1-p)*b.y;
+	return createVector(cx, cy);
+	// use this to get barycenter before
+	// and barycenter after a step of velocity
+	// and then use that to figure out b's velocity
+	// that would keep barycenter const
 }
 
 function reset() {
@@ -162,7 +186,15 @@ function changeViewpoint() {
 	}
 	$('#current-view').html(centerMode);
 	updateHistory();
-	if (mode < 4) { reset(); }
+	if (mode < animateMode) { reset(); }
+}
+
+function updateGravity() {
+	gravityStrength = $('#gravity').val() / 5;
+}
+
+function updateStepsize() {
+	step = $('#step-size').val() / 500;
 }
 
 function updateHistory() {
@@ -175,7 +207,7 @@ function showVelocities() {
 }
 
 function mouseClicked() {
-	if (mode <= 3) {
+	if (mode <= 4) {
 		mode++;
 	}
 }
@@ -195,16 +227,3 @@ function getRadiusForBarycenterAtOrigin(aX, bX) {
 	// m1 = m2*(d-r1)/r1
 	return aRad*(d-r1)/r1;
 }
-
-function getBarycenter(a, b, ma, mb) {
-	let p = ma/(ma+mb);
-	let cx = p*a.x + (1-p)*b.x;
-	let cy = p*a.y + (1-p)*b.y;
-	return createVector(cx, cy);
-	// use this to get barycenter before
-	// and barycenter after a step of velocity
-	// and then use that to figure out b's velocity
-	// that would keep barycenter const
-}
-
-
