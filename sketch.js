@@ -2,7 +2,7 @@ let windowWidth;
 let windowHeight;
 let aRad = 10;
 let bRad = 50;
-let step = 0.02;
+let step = 0.1;
 let showHistory = true;
 let centerMode = 'barycenter';
 let maxHistoryLength = 2500;
@@ -89,43 +89,53 @@ function draw() {
 		line(b.x, b.y, b.x + vb.x, b.y + vb.y);
 	}
 
-	// todo: show history of all points over time
-
 	// animate
 	if (mode === 4) {
-		let d = a.dist(b);
-		let u = createVector(b.x-a.x, b.y-a.y);
-		u.normalize();
-		F = -aMass*bMass/d;
-		// F = m*a -> a = F/m
-		
-		va.x -= step*(F/aMass)*u.x;
-		va.y -= step*(F/aMass)*u.y;
-		vb.x += step*(F/bMass)*u.x;
-		vb.y += step*(F/bMass)*u.y;
+		updatePlanets();
 
-		a.x += step*va.x;
-		a.y += step*va.y;
-		b.x += step*vb.x;
-		b.y += step*vb.y;
-
-		if (centerMode.localeCompare('barycenter') == 0) {
-			// center view around barycenter
-			let c = getBarycenter(a, b, aMass, bMass);
-			let offset = createVector(origin.x - c.x, origin.y - c.y);
-			a.add(offset);
-			b.add(offset);
-		} else if (centerMode.localeCompare('planet') == 0) {
-			let offset = createVector(origin.x - b.x, origin.y - b.y);
-			a.add(offset);
-			b.add(offset);
-		}
+		centerAtOrigin();
 		
 		history.push([a.x, a.y, b.x, b.y]);
 		while (history.length > maxHistoryLength) {
 			history = history.slice(1);
 		}
 	}
+}
+
+function updatePlanets() {
+	let f = gravitationalForce(a, b, aMass, bMass);
+
+	// F = m*a -> a = F/m
+	va.x -= step*f.x/aMass;
+	va.y -= step*f.y/aMass;
+	vb.x += step*f.x/bMass;
+	vb.y += step*f.y/bMass;
+
+	a.x += step*va.x;
+	a.y += step*va.y;
+	b.x += step*vb.x;
+	b.y += step*vb.y;	
+}
+
+function centerAtOrigin() {
+	if (centerMode.localeCompare('barycenter') == 0) {
+		// center view around barycenter
+		let c = getBarycenter(a, b, aMass, bMass);
+		let offset = createVector(origin.x - c.x, origin.y - c.y);
+		a.add(offset);
+		b.add(offset);
+	} else if (centerMode.localeCompare('planet') == 0) {
+		let offset = createVector(origin.x - b.x, origin.y - b.y);
+		a.add(offset);
+		b.add(offset);
+	}
+}
+
+function gravitationalForce(a, b, aMass, bMass) {
+	let dsq = Math.pow(a.dist(b), 2);
+	let F = 100 * -aMass*bMass/dsq;
+	let u = createVector(b.x-a.x, b.y-a.y);
+	return u.normalize().mult(F);
 }
 
 function reset() {
@@ -152,6 +162,7 @@ function changeViewpoint() {
 	}
 	$('#current-view').html(centerMode);
 	updateHistory();
+	if (mode < 4) { reset(); }
 }
 
 function updateHistory() {
