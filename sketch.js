@@ -17,20 +17,24 @@ let aMass, bMass;
 let history;
 
 // todo:
+// - mobile doesn't let you choose planet size
 // - gravity for multiple planets
 // - functionality to add/remove multiple planets
 // - click, drag, and throw planets to initialize?
 // - I think orbits should be closed and not like a spirograph; what is going wrong with my code?
 // - make planet B a light source? (involves making planet A a sphere, and then adding a point light wherever planet B is)
 // - make lines neon? # https://www.youtube.com/watch?v=iIWH3IUYHzM
+// some kind of error happening when they get too close -- they bend
 // 
 
 function setup() {
 	windowWidth = displayWidth/2;
 	windowHeight = displayHeight-150;
-	createCanvas(windowWidth, windowHeight);
-	aColor = color('rgba(255, 255, 255, 0.8)');
-	bColor = color('rgba(255, 0, 0, 0.8)');
+	createCanvas(windowWidth, windowHeight, WEBGL);
+	// aColor = color('rgba(255, 80, 255, 0.8)');
+	// bColor = color('rgba(255, 0, 0, 0.8)');
+	aColor = color('rgba(255, 80, 255, 1.0)');
+	bColor = color('rgba(255, 0, 0, 1.0)');
 	$('#togBtn-history').change(updateHistory);
 	$('#reset').click(reset);
 	$('a.viewpoint').click(changeViewpoint);
@@ -43,6 +47,7 @@ function setup() {
 }
 
 function draw() {
+	translate(-origin.x, -origin.y);
 	clear();
 	background('black');
 
@@ -62,26 +67,35 @@ function draw() {
 	}
 
 	// draw planet B
-	fill(bColor);
-	noStroke();
 	if (mode === 1) {
 		// b.x = constrain(mouseX, origin.x, windowWidth);
 		b.x = mouseX;
 		b.y = mouseY;
 	}
-
 	// pick planet B's radius
 	if (mode === 2) {
 		bRad = createVector(mouseX, mouseY).dist(b);
 		bMass = getMass(bRad);
 	}
-	ellipse(b.x, b.y, bRad);
+	fill(bColor);
+	noStroke();
+	push();
+	translate(b.x, b.y);
+	sphere(bRad);
+	pop();
+	// ellipse(b.x, b.y, bRad);
+
+	pointLight(250, 250, 250, b.x, b.y, bRad);
 
 	// draw planet A
 	fill(aColor);
 	noStroke();
-	ellipse(a.x, a.y, aRad);
-
+	push();
+	translate(a.x, a.y);
+	sphere(aRad);
+	pop();
+	// ellipse(a.x, a.y, aRad);
+	
 	// pick/draw velocity of A
 	stroke(aColor);
 	if (mode === 3) {
