@@ -1,8 +1,11 @@
 let stepSize = 0.1;
 let gravityStrength = 10;
 let planetRadius = 40;
+let showHistory = true;
 let planetColor = 'white';
 let planetMode = 0;
+let maxHistoryLength = 1000;
+let curPlanet;
 let planets = [];
 let history = [];
 let oldPlanets = [];
@@ -12,16 +15,19 @@ function fx(x) { return x-width/2; }
 function fy(y) { return y-height/2; }
 
 function setup() {
-	createCanvas(500, 500, WEBGL);
+	createCanvas(800, 600, WEBGL);
 	$('#reset').click(reset);
 	$('#gravity').change(updateGravity);
 	$('#step-size').change(updateStepsize);
 	$('#togBtn-history').change(updateHistory);
+
+	$('#togBtn-history').click();
 }
 
 function reset() {
 	oldPlanets = planets;
 	planets = [];
+	history = [];
 }
 
 function updateGravity() {
@@ -41,21 +47,40 @@ function mouseClicked() {
 	if (mouseX < 0 || mouseY < 0 || mouseX > width || mouseY > height) {
 		return;
 	}
-	if (planetMode >= 0) { // add new planet
-		let curPlanet = new Planet(fx(clickedCursorPos.x), fy(clickedCursorPos.y), planetRadius, planetColor);
+	if (planetMode <= 1) { // add new planet
+		curPlanet = new Planet(fx(clickedCursorPos.x), fy(clickedCursorPos.y), planetRadius, planetColor);
 		planetColor = 'red';
 		planets.push(curPlanet);
+		planetMode = 2;
+	} else if (planetMode === 2) { // choose velocity
+		curPlanet.vel = createVector(fx(mouseX)-curPlanet.pos.x, fy(mouseY)-curPlanet.pos.y);
+		planetMode = 0;
+	}
+}
+
+function keyPressed() {
+	if (planetMode === 2 && keyCode === ESCAPE) {
+		// keep initial velocity of zero
 		planetMode = 0;
 	}
 }
 
 function mousePressed() {
-	planetMode = 1;
-	clickedCursorPos = createVector(mouseX, mouseY);
+	if (mouseX < 0 || mouseY < 0 || mouseX > width || mouseY > height) {
+		return;
+	}
+	if (planetMode === 0) {
+		// save clicked position for new planet's location
+		planetMode = 1;
+		clickedCursorPos = createVector(mouseX, mouseY);
+	}
 }
 
 function mouseDragged() {
-	planetRadius = createVector(mouseX, mouseY).dist(clickedCursorPos);
+	if (planetMode === 1) {
+		// adjusts planet's radius by dragging
+		planetRadius = createVector(mouseX, mouseY).dist(clickedCursorPos);
+	}
 }
 
 class Planet {
@@ -73,6 +98,9 @@ class Planet {
   applyForce(f) {
   	this.vel.x += stepSize*f.x/this.mass;
   	this.vel.y += stepSize*f.y/this.mass;
+  }
+
+  updatePosition() {
   	this.pos.x += stepSize*this.vel.x;
   	this.pos.y += stepSize*this.vel.y;
   }
@@ -97,7 +125,7 @@ function draw() {
 	}
 	
 	// currently created planet
-	if (planetMode >= 0) {
+	if (planetMode <= 1) {
 		noStroke();
 		push();
 		if (planetMode === 0) {
@@ -107,10 +135,30 @@ function draw() {
 		}
 		sphere(planetRadius);
 		pop();
+	} else if (planetMode === 2) {
+		stroke(curPlanet.clr);
+		line(curPlanet.pos.x, curPlanet.pos.y, fx(mouseX), fy(mouseY));
+	}
+
+	if (planetMode > 0) { return; }
+	if (planets.length < 2) { return; }
+
+	// show history
+	if (showHistory) {
+		for (var i = 0; i < history.length-1; i++) {
+			let c = 0;
+			for (var j = 0; j < planets.length; j++) {
+				stroke(planets[j].clr);
+				if (c >= history[i].length) {
+					continue;
+				}
+				line(history[i][c], history[i][c+1], history[i+1][c], history[i+1][c+1]);
+				c += 2;
+			}
+		}
 	}
 
 	// calculate forces
-	let forces = [];
 	for (var i = 0; i < planets.length; i++) {
 		let f = createVector(0, 0);
 		for (var j = 0; j < planets.length; j++) {
@@ -118,11 +166,11 @@ function draw() {
 				f.add(gravitationalForce(planets[i], planets[j]));
 			}
 		}
-		forces.push(f);
+		planets[i].applyForce(f);
 	}
 	// apply forces
 	for (var i = 0; i < planets.length; i++) {
-		planets[i].applyForce(forces[i]);
+		planets[i].updatePosition();
 	}
 	// check for collisions
 	for (var i = 0; i < planets.length; i++) {
@@ -134,6 +182,16 @@ function draw() {
 				planets[j].vel.y = 0;
 			}
 		}
+	}
+
+	let cHistory = [];
+	for (var i = 0; i < planets.length; i++) {
+		cHistory.push(planets[i].pos.x);
+		cHistory.push(planets[i].pos.y);
+	}
+	history.push(cHistory);
+	while (history.length > maxHistoryLength) {
+		history = history.slice(1);
 	}
 }
 
