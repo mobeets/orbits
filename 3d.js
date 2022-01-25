@@ -1,10 +1,14 @@
+// todo: add back in centering
+
 let stepSize = 0.1;
 let gravityStrength = 10;
 let planetRadius = 40;
 let showHistory = true;
 let planetColor = 'white';
+let centerMode = 'barycenter';
 let planetMode = 0;
-let maxHistoryLength = 1000;
+let maxHistoryLength = 200;
+let showPlanets = true;
 let curPlanet;
 let planets = [];
 let history = [];
@@ -20,8 +24,11 @@ function setup() {
 	$('#gravity').change(updateGravity);
 	$('#step-size').change(updateStepsize);
 	$('#togBtn-history').change(updateHistory);
+	$('#togBtn-planets').change(updatePlanetVisibility);
+	$('a.viewpoint').click(updateViewpoint);
 
 	$('#togBtn-history').click();
+	$('#togBtn-planets').click();
 }
 
 function reset() {
@@ -43,13 +50,35 @@ function updateHistory() {
 	history = [];
 }
 
+function updatePlanetVisibility() {
+	showPlanets = $('#togBtn-planets').is(':checked');
+}
+
+function updateViewpoint() {
+
+	let anchor = $(this).attr("href");
+	if (anchor.localeCompare('#barycenter') == 0) {
+		centerMode = 'barycenter';
+	} else if (anchor.localeCompare('#planet') == 0) {
+		centerMode = 'planet';
+	} else {
+		centerMode = 'absolute';
+	}
+	$('#current-view').html(centerMode);
+	updateHistory();
+}
+
 function mouseClicked() {
 	if (mouseX < 0 || mouseY < 0 || mouseX > width || mouseY > height) {
 		return;
 	}
 	if (planetMode <= 1) { // add new planet
+		if (planets.length > 0) {
+			planetColor = 'red';
+		} else {
+			planetColor = 'white';
+		}
 		curPlanet = new Planet(fx(clickedCursorPos.x), fy(clickedCursorPos.y), planetRadius, planetColor);
-		planetColor = 'red';
 		planets.push(curPlanet);
 		planetMode = 2;
 	} else if (planetMode === 2) { // choose velocity
@@ -81,6 +110,38 @@ function mouseDragged() {
 		// adjusts planet's radius by dragging
 		planetRadius = createVector(mouseX, mouseY).dist(clickedCursorPos);
 	}
+}
+
+function takeViewpoint() {
+	let origin = createVector(0, 0);
+	if (centerMode.localeCompare('barycenter') == 0) {
+		// center view around barycenter
+		let c = getBarycenter();
+		let offset = createVector(origin.x - c.x, origin.y - c.y);
+		for (var i = 0; i < planets.length; i++) {
+			planets[i].pos.add(offset);
+		}
+	} else if (centerMode.localeCompare('planet') == 0) {
+		let c = planets[0].pos;
+		let offset = createVector(origin.x - c.x, origin.y - c.y);
+		for (var i = 0; i < planets.length; i++) {
+			planets[i].pos.add(offset);
+		}
+	}
+}
+
+function getBarycenter() {
+	let totalMass = 0;
+	for (var i = 0; i < planets.length; i++) {
+		totalMass += planets[i].mass;
+	}
+	let c = createVector(0, 0);
+	for (var i = 0; i < planets.length; i++) {
+		let p = planets[i].mass/totalMass;
+		c.x += p*planets[i].pos.x;
+		c.y += p*planets[i].pos.y;
+	}
+	return c;
 }
 
 class Planet {
@@ -115,13 +176,15 @@ function draw() {
 	}
 
 	// draw all created planets
-	for (var i = 0; i < planets.length; i++) {
-		noStroke();
-		fill(planets[i].clr);
-		push();
-		translate(planets[i].pos.x, planets[i].pos.y);
-		sphere(planets[i].r);
-		pop();
+	if (planets.length < 2 || planetMode > 0 || showPlanets) {
+		for (var i = 0; i < planets.length; i++) {
+			noStroke();
+			fill(planets[i].clr);
+			push();
+			translate(planets[i].pos.x, planets[i].pos.y);
+			sphere(planets[i].r);
+			pop();
+		}
 	}
 	
 	// currently created planet
@@ -183,6 +246,8 @@ function draw() {
 			}
 		}
 	}
+
+	takeViewpoint();
 
 	let cHistory = [];
 	for (var i = 0; i < planets.length; i++) {
